@@ -53,9 +53,9 @@
         </div>
         
         <div class="issue-box">
-            <select id="progSelect">
+            <select id="progSelect" onchange="clearInputFields()">
                 <option value="Program_01">Program 01 (올인원 구독자 관리)</option>
-                <option value="Program_02">Program 02 (쇼핑)</option>
+                <option value="Program_02">Program 02 (프리미엄 구독자 관리)</option>
                 <option value="Program_03">Program 03 (기타)</option>
             </select>
             <input type="text" id="userId" placeholder="발급할 아이디 입력" style="flex:1">
@@ -124,6 +124,13 @@
             }
         }
 
+        // 프로그램 선택 변경 시 입력 필드 초기화 및 목록 새로고침
+        function clearInputFields() {
+            document.getElementById('userId').value = "";
+            document.getElementById('days').value = "30";
+            loadList(); // 선택된 프로그램에 맞게 목록 필터링
+        }
+
         // 라이선스 발급 로직
         async function issueId() {
             const prog = document.getElementById('progSelect').value;
@@ -156,9 +163,10 @@
             } catch (e) { alert("연결 오류: " + e.message); }
         }
 
-        // 목록 불러오기
+        // 목록 불러오기 (선택된 프로그램만 필터링)
         async function loadList() {
             try {
+                const selectedProg = document.getElementById('progSelect').value;
                 const res = await fetch(`${DB_URL}/licenses.json`);
                 const data = await res.json();
                 const tbody = document.getElementById('listBody');
@@ -169,9 +177,14 @@
                     return;
                 }
 
+                let hasData = false;
                 for (let progKey in data) {
+                    // 선택된 프로그램만 표시
+                    if (progKey !== selectedProg) continue;
+                    
                     const userGroup = data[progKey];
                     for (let userKey in userGroup) {
+                        hasData = true;
                         const info = userGroup[userKey];
                         tbody.innerHTML += `
                             <tr>
@@ -182,6 +195,10 @@
                                 <td><button class="btn-del" onclick="deleteId('${progKey}', '${userKey}')">삭제</button></td>
                             </tr>`;
                     }
+                }
+
+                if (!hasData) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999;">이 프로그램에 등록된 사용자가 없습니다.</td></tr>';
                 }
             } catch (e) { console.error("로드 실패:", e); }
         }
