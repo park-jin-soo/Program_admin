@@ -103,7 +103,7 @@
                     <th>사용자 아이디</th>
                     <th>만료 예정일</th>
                     <th>최대 계정</th>
-                    <th>등록된 네이버 계정</th>
+                    <th>등록 계정 수</th>
                     <th>상태</th>
                     <th>관리</th>
                 </tr>
@@ -141,10 +141,10 @@
                 </select>
             </div>
             <div class="modal-field">
-                <label>등록된 네이버 계정 
-                    <button class="btn-reset" onclick="resetNaverAccounts()">계정 초기화</button>
+                <label>등록된 네이버 계정 목록
+                    <button class="btn-reset" onclick="resetNaverAccounts()">전체 초기화</button>
                 </label>
-                <div id="naverAccountsList" style="padding:12px; background:#f0f7ff; border:1px solid #d6e4ff; border-radius:6px; min-height:50px; color:#333; font-size:13px;">
+                <div id="naverAccountsList" style="padding:12px; background:#f0f7ff; border:1px solid #d6e4ff; border-radius:6px; min-height:50px; color:#333; font-size:13px; max-height:200px; overflow-y:auto;">
                     등록된 계정이 없습니다.
                 </div>
                 <p style="margin-top:8px; font-size:12px; color:#999;">💡 사용자가 프로그램에서 네이버 계정을 등록하면 여기에 자동으로 표시됩니다.</p>
@@ -284,16 +284,18 @@
                             programName = `<b>${progKey}</b>`;
                         }
                         
-                        // 등록된 계정 목록 표시
+                        // 등록된 계정 수량 표시
                         let accountsDisplay = '';
                         if (registeredCount > 0) {
-                            accountsDisplay = '<div style="font-size:12px; color:#666;">';
+                            // 계정 목록을 툴팁으로 표시
+                            let accountNames = [];
                             for (let key in registeredAccounts) {
-                                accountsDisplay += `📌 ${registeredAccounts[key]}<br>`;
+                                accountNames.push(registeredAccounts[key]);
                             }
-                            accountsDisplay += '</div>';
+                            const tooltipText = accountNames.join('\n');
+                            accountsDisplay = `<span style="color:#52c41a; font-weight:bold; cursor:help;" title="${tooltipText}">${registeredCount}개 등록됨</span>`;
                         } else {
-                            accountsDisplay = '<span style="color:#999;">미등록</span>';
+                            accountsDisplay = '<span style="color:#999; font-weight:normal;">0개 등록됨</span>';
                         }
                         
                         tbody.innerHTML += `
@@ -352,12 +354,20 @@
             // 등록된 네이버 계정 표시
             const registeredAccounts = data.info.registeredNaverAccounts || {};
             const accountsList = document.getElementById('naverAccountsList');
-            if (Object.keys(registeredAccounts).length === 0) {
+            const accountCount = Object.keys(registeredAccounts).length;
+            
+            if (accountCount === 0) {
                 accountsList.innerHTML = '<span style="color:#999;">등록된 계정이 없습니다.</span>';
             } else {
-                let html = '';
+                let html = `<div style="margin-bottom:8px; font-weight:bold; color:#1890ff;">총 ${accountCount}개 계정 등록됨</div>`;
+                let index = 1;
                 for (let key in registeredAccounts) {
-                    html += `<div style="padding:8px 0; border-bottom:1px solid #eee; font-weight:500;">📌 ${registeredAccounts[key]}</div>`;
+                    html += `
+                        <div style="padding:10px; margin-bottom:8px; background:#f8f9fa; border-left:3px solid #1890ff; border-radius:4px;">
+                            <span style="display:inline-block; width:30px; background:#1890ff; color:white; text-align:center; border-radius:3px; font-weight:bold; font-size:11px;">${index}</span>
+                            <span style="margin-left:10px; font-weight:500; color:#333;">${registeredAccounts[key]}</span>
+                        </div>`;
+                    index++;
                 }
                 accountsList.innerHTML = html;
             }
