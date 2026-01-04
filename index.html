@@ -32,7 +32,26 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { background: #f8f9fa; border-bottom: 2px solid #dee2e6; padding: 15px; text-align: left; color: #495057; }
         td { padding: 15px; border-bottom: 1px solid #eee; }
-        .btn-del { background: #ff4d4f; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        .btn-del { background: #ff4d4f; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 5px; }
+        .btn-edit { background: #1890ff; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        
+        /* 수정 모달 스타일 */
+        #editModal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            min-width: 400px; max-width: 500px;
+        }
+        .modal-content h3 { margin-top: 0; color: #333; }
+        .modal-field { margin-bottom: 20px; }
+        .modal-field label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; }
+        .modal-field input, .modal-field select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 25px; }
+        .btn-save { background: #00c73c; color: #fff; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; flex: 1; font-weight: bold; }
+        .btn-cancel { background: #999; color: #fff; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; flex: 1; }
+        .btn-reset { background: #ff9800; color: #fff; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 12px; }
     </style>
 </head>
 <body oncontextmenu="return false" onselectstart="return false" ondragstart="return false">
@@ -54,29 +73,87 @@
         
         <div class="issue-box">
             <select id="progSelect" onchange="clearInputFields()">
-                <option value="Program_01">Program 01 (올인원 구독자 관리)</option>
-                <option value="Program_02">Program 02 (프리미엄 구독자 관리)</option>
-                <option value="Program_03">Program 03 (기타)</option>
+                <option value="Program_01">Program 01 (올인원 구독)</option>
+                <option value="Program_02" selected>Program 02 (프리미엄)</option>
+                <option value="Program_03">Program 03</option>
+                <option value="Program_04">Program 04</option>
+                <option value="Program_05">Program 05</option>
+                <option value="Program_06">Program 06</option>
+                <option value="Program_07">Program 07</option>
+                <option value="Program_08">Program 08</option>
+                <option value="Program_09">Program 09</option>
+                <option value="Program_10">Program 10</option>
             </select>
             <input type="text" id="userId" placeholder="발급할 아이디 입력" style="flex:1">
             <input type="number" id="days" value="30" style="width:70px"> 일 부여
+            <select id="maxAccounts" style="width:100px">
+                <option value="1">1개 계정</option>
+                <option value="2">2개 계정</option>
+                <option value="3">3개 계정</option>
+                <option value="5">5개 계정</option>
+                <option value="10">10개 계정</option>
+            </select>
             <button class="btn-issue" onclick="issueId()">라이선스 발급</button>
         </div>
 
         <table>
             <thead>
                 <tr>
-                    <th>소속 프로그램</th>
+                    <th>프로그램</th>
                     <th>사용자 아이디</th>
                     <th>만료 예정일</th>
+                    <th>최대 계정</th>
+                    <th>등록된 네이버 계정</th>
                     <th>상태</th>
                     <th>관리</th>
                 </tr>
             </thead>
             <tbody id="listBody">
-                <tr><td colspan="5" style="text-align:center;">데이터를 불러오는 중입니다...</td></tr>
+                <tr><td colspan="7" style="text-align:center;">데이터를 불러오는 중입니다...</td></tr>
             </tbody>
         </table>
+    </div>
+
+    <!-- 수정 모달 -->
+    <div id="editModal" onclick="if(event.target.id==='editModal') closeEditModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3>📝 사용자 정보 수정</h3>
+            <div class="modal-field">
+                <label>프로그램</label>
+                <input type="text" id="editProgId" readonly style="background:#f5f5f5;">
+            </div>
+            <div class="modal-field">
+                <label>사용자 아이디</label>
+                <input type="text" id="editUserId" readonly style="background:#f5f5f5;">
+            </div>
+            <div class="modal-field">
+                <label>만료일 <span id="editDdayDisplay"></span></label>
+                <input type="date" id="editExpiryDate" onchange="updateDdayDisplay()">
+            </div>
+            <div class="modal-field">
+                <label>최대 계정 수</label>
+                <select id="editMaxAccounts">
+                    <option value="1">1개 계정</option>
+                    <option value="2">2개 계정</option>
+                    <option value="3">3개 계정</option>
+                    <option value="5">5개 계정</option>
+                    <option value="10">10개 계정</option>
+                </select>
+            </div>
+            <div class="modal-field">
+                <label>등록된 네이버 계정 
+                    <button class="btn-reset" onclick="resetNaverAccounts()">계정 초기화</button>
+                </label>
+                <div id="naverAccountsList" style="padding:12px; background:#f0f7ff; border:1px solid #d6e4ff; border-radius:6px; min-height:50px; color:#333; font-size:13px;">
+                    등록된 계정이 없습니다.
+                </div>
+                <p style="margin-top:8px; font-size:12px; color:#999;">💡 사용자가 프로그램에서 네이버 계정을 등록하면 여기에 자동으로 표시됩니다.</p>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="closeEditModal()">취소</button>
+                <button class="btn-save" onclick="saveEdit()">저장</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -128,6 +205,7 @@
         function clearInputFields() {
             document.getElementById('userId').value = "";
             document.getElementById('days').value = "30";
+            document.getElementById('maxAccounts').value = "1";
             loadList(); // 선택된 프로그램에 맞게 목록 필터링
         }
 
@@ -136,6 +214,7 @@
             const prog = document.getElementById('progSelect').value;
             const user = document.getElementById('userId').value.trim();
             const days = parseInt(document.getElementById('days').value);
+            const maxAccounts = parseInt(document.getElementById('maxAccounts').value);
 
             if(!user) return alert("아이디를 입력해주세요.");
 
@@ -147,7 +226,9 @@
                 expiryDate: expiry.toISOString().split('T')[0],
                 regDate: now.toISOString().split('T')[0],
                 status: "사용가능",
-                progId: prog
+                progId: prog,
+                maxAccounts: maxAccounts,
+                registeredNaverAccounts: {}
             };
 
             try {
@@ -156,8 +237,9 @@
                     body: JSON.stringify(payload)
                 });
                 if(res.ok) {
-                    alert(`[${prog}] 에 [${user}] 아이디 등록 완료!`);
+                    alert(`[${prog}] 에 [${user}] 아이디 등록 완료! (최대 ${maxAccounts}개 계정)`);
                     document.getElementById('userId').value = "";
+                    document.getElementById('maxAccounts').value = "1";
                     loadList();
                 }
             } catch (e) { alert("연결 오류: " + e.message); }
@@ -173,7 +255,7 @@
                 tbody.innerHTML = "";
 
                 if (!data) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999;">데이터가 없습니다.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#999;">데이터가 없습니다.</td></tr>';
                     return;
                 }
 
@@ -186,19 +268,52 @@
                     for (let userKey in userGroup) {
                         hasData = true;
                         const info = userGroup[userKey];
+                        const maxAccounts = info.maxAccounts || 1;
+                        const registeredAccounts = info.registeredNaverAccounts || {};
+                        const registeredCount = Object.keys(registeredAccounts).length;
+                        const dday = calculateDday(info.expiryDate);
+                        const ddayHtml = formatDday(dday);
+                        
+                        // 프로그램 이름 표시
+                        let programName;
+                        if (progKey === 'Program_01') {
+                            programName = '<b>올인원 구독</b>';
+                        } else if (progKey === 'Program_02') {
+                            programName = '<b>프리미엄</b>';
+                        } else {
+                            programName = `<b>${progKey}</b>`;
+                        }
+                        
+                        // 등록된 계정 목록 표시
+                        let accountsDisplay = '';
+                        if (registeredCount > 0) {
+                            accountsDisplay = '<div style="font-size:12px; color:#666;">';
+                            for (let key in registeredAccounts) {
+                                accountsDisplay += `📌 ${registeredAccounts[key]}<br>`;
+                            }
+                            accountsDisplay += '</div>';
+                        } else {
+                            accountsDisplay = '<span style="color:#999;">미등록</span>';
+                        }
+                        
                         tbody.innerHTML += `
                             <tr>
-                                <td><b>${progKey}</b></td>
+                                <td>${programName}</td>
                                 <td>${userKey}</td>
-                                <td>${info.expiryDate}</td>
+                                <td>${info.expiryDate} ${ddayHtml}</td>
+                                <td><span style="color:#1890ff; font-weight:bold;">${maxAccounts}개</span></td>
+                                <td>${accountsDisplay}</td>
                                 <td style="color:#00c73c; font-weight:bold;">사용가능</td>
-                                <td><button class="btn-del" onclick="deleteId('${progKey}', '${userKey}')">삭제</button></td>
+                                <td>
+                                    <button class="btn-edit" onclick='openEditModal(${JSON.stringify({progKey, userKey, info})})'>수정</button>
+                                    <button class="btn-del" onclick="deleteId('${progKey}', '${userKey}')">삭제</button>
+                                </td>
                             </tr>`;
                     }
                 }
 
                 if (!hasData) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999;">이 프로그램에 등록된 사용자가 없습니다.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#999;">이 프로그램에 등록된 사용자가 없습니다.</td></tr>';
                 }
             } catch (e) { console.error("로드 실패:", e); }
         }
@@ -209,9 +324,155 @@
             loadList();
         }
 
+        // 수정 모달 관련 함수
+        let currentEditData = null;
+
+        function openEditModal(data) {
+            currentEditData = data;
+            
+            // 프로그램 이름 표시
+            let programName;
+            if (data.progKey === 'Program_01') {
+                programName = '올인원 구독';
+            } else if (data.progKey === 'Program_02') {
+                programName = '프리미엄';
+            } else {
+                programName = data.progKey;
+            }
+            document.getElementById('editProgId').value = programName;
+            document.getElementById('editUserId').value = data.userKey;
+            document.getElementById('editExpiryDate').value = data.info.expiryDate;
+            document.getElementById('editMaxAccounts').value = data.info.maxAccounts || 1;
+            
+            // D-day 계산 및 표시
+            const dday = calculateDday(data.info.expiryDate);
+            const ddayHtml = formatDday(dday);
+            document.getElementById('editDdayDisplay').innerHTML = ddayHtml;
+            
+            // 등록된 네이버 계정 표시
+            const registeredAccounts = data.info.registeredNaverAccounts || {};
+            const accountsList = document.getElementById('naverAccountsList');
+            if (Object.keys(registeredAccounts).length === 0) {
+                accountsList.innerHTML = '<span style="color:#999;">등록된 계정이 없습니다.</span>';
+            } else {
+                let html = '';
+                for (let key in registeredAccounts) {
+                    html += `<div style="padding:8px 0; border-bottom:1px solid #eee; font-weight:500;">📌 ${registeredAccounts[key]}</div>`;
+                }
+                accountsList.innerHTML = html;
+            }
+            
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            currentEditData = null;
+        }
+
+        function updateDdayDisplay() {
+            const newDate = document.getElementById('editExpiryDate').value;
+            if (newDate) {
+                const dday = calculateDday(newDate);
+                const ddayHtml = formatDday(dday);
+                document.getElementById('editDdayDisplay').innerHTML = ddayHtml;
+            }
+        }
+
+        async function saveEdit() {
+            if (!currentEditData) return;
+            
+            const prog = currentEditData.progKey;
+            const user = currentEditData.userKey;
+            const newExpiryDate = document.getElementById('editExpiryDate').value;
+            const newMaxAccounts = parseInt(document.getElementById('editMaxAccounts').value);
+            
+            // 기존 데이터 유지하면서 수정
+            const updatedData = {
+                ...currentEditData.info,
+                expiryDate: newExpiryDate,
+                maxAccounts: newMaxAccounts
+            };
+            
+            try {
+                const res = await fetch(`${DB_URL}/licenses/${prog}/${user}.json`, {
+                    method: 'PUT',
+                    body: JSON.stringify(updatedData)
+                });
+                if (res.ok) {
+                    alert('수정이 완료되었습니다!');
+                    closeEditModal();
+                    loadList();
+                }
+            } catch (e) {
+                alert("수정 중 오류 발생: " + e.message);
+            }
+        }
+
+        async function resetNaverAccounts() {
+            if (!currentEditData) return;
+            
+            if (!confirm('등록된 네이버 계정을 모두 초기화하시겠습니까?\n사용자는 다시 계정을 등록할 수 있게 됩니다.')) {
+                return;
+            }
+            
+            const prog = currentEditData.progKey;
+            const user = currentEditData.userKey;
+            
+            // registeredNaverAccounts만 초기화
+            const updatedData = {
+                ...currentEditData.info,
+                registeredNaverAccounts: {}
+            };
+            
+            try {
+                const res = await fetch(`${DB_URL}/licenses/${prog}/${user}.json`, {
+                    method: 'PUT',
+                    body: JSON.stringify(updatedData)
+                });
+                if (res.ok) {
+                    alert('네이버 계정이 초기화되었습니다!');
+                    // 모달 새로고침
+                    currentEditData.info.registeredNaverAccounts = {};
+                    document.getElementById('naverAccountsList').innerHTML = '<span style="color:#999;">등록된 계정이 없습니다.</span>';
+                    loadList();
+                }
+            } catch (e) {
+                alert("초기화 중 오류 발생: " + e.message);
+            }
+        }
+
+        // D-day 계산 함수
+        function calculateDday(expiryDate) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const expiry = new Date(expiryDate);
+            expiry.setHours(0, 0, 0, 0);
+            const diffTime = expiry - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays;
+        }
+
+        // D-day 포맷 함수
+        function formatDday(days) {
+            if (days < 0) {
+                return `<span style="color:#ff4d4f; font-weight:bold;">(만료 ${Math.abs(days)}일 지남)</span>`;
+            } else if (days === 0) {
+                return `<span style="color:#ff4d4f; font-weight:bold;">(D-Day)</span>`;
+            } else if (days <= 7) {
+                return `<span style="color:#ff4d4f; font-weight:bold;">(D-${days}일)</span>`;
+            } else if (days <= 30) {
+                return `<span style="color:#ff9800; font-weight:bold;">(D-${days}일)</span>`;
+            } else {
+                return `<span style="color:#52c41a; font-weight:bold;">(D-${days}일)</span>`;
+            }
+        }
+
         // 초기화 시 보안 기능 활성화
         window.onload = function() {
             enableSecurity();
+            // Program_02가 기본 선택되도록 설정
+            document.getElementById('progSelect').value = 'Program_02';
         };
     </script>
 </body>
